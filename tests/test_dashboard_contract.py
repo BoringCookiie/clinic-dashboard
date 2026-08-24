@@ -2,13 +2,12 @@
 Generic Dashboard Contract Validation Tests.
 Validates that any get_answer(question) implementation returns a valid ChatbotResponse
 matching all structural and type requirements expected by the Streamlit dashboard.
-
-Teammates can import validate_chatbot_response or run this test module against their implementation.
 """
 
 import pytest
 from typing import Callable, Any
 from chatbot.mock_chatbot import get_answer as mock_get_answer
+from chatbot.hf_chatbot import get_answer as hf_get_answer
 
 ALLOWED_CHART_TYPES = {"kpi", "bar", "line", "pie", "table", "none"}
 
@@ -73,12 +72,8 @@ def test_mock_chatbot_contract(question: str):
     validate_chatbot_response(response)
 
 
-def test_custom_chatbot_implementation_contract(custom_get_answer_fn: Callable[[str], dict] = None):
-    """
-    Helper test allowing teammates to test their custom chatbot function.
-    Usage: Call this function passing custom_get_answer_fn, or run pytest directly.
-    """
-    fn_to_test = custom_get_answer_fn or mock_get_answer
-    for q in SAMPLE_TEST_QUESTIONS:
-        resp = fn_to_test(q)
-        validate_chatbot_response(resp)
+@pytest.mark.parametrize("question", SAMPLE_TEST_QUESTIONS)
+def test_hf_chatbot_contract(question: str):
+    """Tests Hugging Face chatbot implementation against contract validator."""
+    response = hf_get_answer(question)
+    validate_chatbot_response(response)

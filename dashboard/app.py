@@ -17,9 +17,9 @@ if str(ROOT_DIR) not in sys.path:
 
 # ==============================================================================
 # SINGLE CONFIGURABLE CHATBOT IMPORT
-# To hand off to your teammate: swap mock_chatbot with her module name below!
+# Powered by Hugging Face AI Text-to-SQL Model engine
 # ==============================================================================
-from chatbot.mock_chatbot import get_answer
+from chatbot.hf_chatbot import get_answer
 # ==============================================================================
 
 from database.db_utils import run_raw_query
@@ -75,11 +75,13 @@ def load_overview_metrics():
 
 
 def main():
-    # Session state initialization for chat history
+    # Session state initialization
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = []
     if "active_response" not in st.session_state:
         st.session_state["active_response"] = None
+    if "last_executed_query" not in st.session_state:
+        st.session_state["last_executed_query"] = None
 
     # Sidebar Navigation & Information
     with st.sidebar:
@@ -94,11 +96,10 @@ def main():
             st.metric("Collected Revenue", metrics[2]["value"])
 
         st.markdown("---")
-        st.markdown("### 🤝 Handover Contract Notice")
+        st.markdown("### 🤖 Hugging Face AI Chatbot")
         st.info(
-            "**Teammate Integration Point:**\n\n"
-            "This dashboard connects to `chatbot/interface.py`.\n"
-            "To swap the mock implementation with real LLM/NL-to-SQL logic, update the import statement in `dashboard/app.py`!"
+            "**Active Model:** `cssupport/t5-small-awesome-text-to-sql`\n\n"
+            "Converts natural language questions into SQLite queries and returns visual answers!"
         )
         st.markdown("---")
         st.caption("Smart Clinic Management System v1.0.0")
@@ -122,30 +123,34 @@ def main():
             if st.button(sample_q, key=f"chip_btn_{idx}", use_container_width=True):
                 clicked_question = sample_q
 
-    # Text Input Form
-    with st.form(key="nl_query_form", clear_on_submit=False):
-        col_input, col_btn = st.columns([5, 1])
-        with col_input:
-            user_query = st.text_input(
-                "Type any question about patients, appointments, diagnoses, revenue, or doctors:",
-                placeholder="e.g. What are the top diagnoses? OR Show appointments by month",
-                key="user_query_text"
-            )
-        with col_btn:
-            st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-            submit_submitted = st.form_submit_button("Ask Question 🚀", use_container_width=True)
+    # Text Input & Submit Button
+    col_input, col_btn = st.columns([5, 1])
+    with col_input:
+        user_query = st.text_input(
+            "Type any question about patients, appointments, diagnoses, revenue, or doctors:",
+            placeholder="e.g. What are the top diagnoses? OR Show appointments by month",
+            key="user_query_input_text"
+        )
+    with col_btn:
+        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+        ask_btn_clicked = st.button("Ask Question 🚀", key="ask_btn_trigger", use_container_width=True)
 
-    # Handle Question Processing
-    query_to_execute = clicked_question or (user_query.strip() if submit_submitted and user_query else None)
+    # Determine candidate question
+    candidate_query = None
+    if clicked_question:
+        candidate_query = clicked_question
+    elif ask_btn_clicked and user_query and user_query.strip():
+        candidate_query = user_query.strip()
 
-    if query_to_execute:
-        with st.spinner(f"Querying clinic database for: '{query_to_execute}'..."):
-            response: ChatbotResponse = get_answer(query_to_execute)
+    # Process query if it's new or requested
+    if candidate_query and candidate_query != st.session_state.get("last_executed_query"):
+        with st.spinner(f"AI Model Querying clinic database for: '{candidate_query}'..."):
+            response: ChatbotResponse = get_answer(candidate_query)
             st.session_state["active_response"] = {
-                "question": query_to_execute,
+                "question": candidate_query,
                 "response": response
             }
-            # Add to history
+            st.session_state["last_executed_query"] = candidate_query
             st.session_state["chat_history"].insert(0, st.session_state["active_response"])
 
     # --------------------------------------------------------------------------
@@ -262,6 +267,7 @@ def main():
                 if st.button("Clear History 🗑️", key="clear_chat_hist"):
                     st.session_state["chat_history"] = []
                     st.session_state["active_response"] = None
+                    st.session_state["last_executed_query"] = None
                     st.rerun()
 
             for item in st.session_state["chat_history"]:
