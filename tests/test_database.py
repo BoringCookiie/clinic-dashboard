@@ -9,7 +9,7 @@ from sqlalchemy import text
 from database.db_utils import engine, SessionLocal, DB_PATH
 from database.schema import (
     Patient, Department, Doctor, Staff, Appointment, Visit,
-    Diagnosis, Medication, Prescription, LabTest, Billing, Payment
+    Diagnosis, Medication, Prescription, LabTest, Billing, Payment, Supplier
 )
 
 
@@ -28,11 +28,12 @@ def test_database_file_exists():
 
 
 def test_table_row_counts(db_session):
-    """Verify that all 12 tables contain non-zero generated records."""
+    """Verify that all tables contain non-zero generated records."""
     assert db_session.query(Department).count() >= 5
     assert db_session.query(Doctor).count() >= 15
     assert db_session.query(Staff).count() >= 20
     assert db_session.query(Patient).count() >= 300
+    assert db_session.query(Supplier).count() >= 5
     assert db_session.query(Medication).count() >= 10
     assert db_session.query(Appointment).count() >= 1000
     assert db_session.query(Visit).count() >= 800
@@ -49,6 +50,15 @@ def test_foreign_key_doctor_department(db_session):
     dept_ids = {d.department_id for d in db_session.query(Department).all()}
     for doc in doctors:
         assert doc.department_id in dept_ids, f"Doctor {doc.doctor_id} has invalid department_id {doc.department_id}"
+
+
+def test_foreign_key_medication_supplier(db_session):
+    """Verify all medications reference a valid supplier ID."""
+    supplier_ids = {f.supplier_id for f in db_session.query(Supplier).all()}
+    medications = db_session.query(Medication).all()
+    for med in medications:
+        assert med.supplier_id is not None, f"Medication {med.medication_id} has no assigned supplier"
+        assert med.supplier_id in supplier_ids, f"Medication {med.medication_id} has invalid supplier_id {med.supplier_id}"
 
 
 def test_foreign_key_appointment_patient_doctor(db_session):

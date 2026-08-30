@@ -1,6 +1,6 @@
 """
 SQLAlchemy ORM Schema definition for the Clinic Management Database.
-Contains 12 relational tables representing clinic operations, clinical records, and billing.
+Contains 13 relational tables representing clinic operations, clinical records, and billing.
 """
 
 from datetime import datetime, date, time
@@ -134,6 +134,23 @@ class Diagnosis(Base):
     visit: Mapped["Visit"] = relationship("Visit", back_populates="diagnoses")
 
 
+class Supplier(Base):
+    """Supplier/vendor providing medications and medical supplies to the clinic."""
+    __tablename__ = "suppliers"
+
+    supplier_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(150), nullable=False, unique=True)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)  # Pharmaceuticals, Medical Equipment, Lab Supplies, etc.
+    contact_person: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    contract_start_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    # Relationships
+    medications: Mapped[List["Medication"]] = relationship("Medication", back_populates="supplier")
+
+
 class Medication(Base):
     __tablename__ = "medications"
 
@@ -141,9 +158,11 @@ class Medication(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     unit_price: Mapped[float] = mapped_column(Float, nullable=False)
+    supplier_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("suppliers.supplier_id"), nullable=True)
 
     # Relationships
     prescriptions: Mapped[List["Prescription"]] = relationship("Prescription", back_populates="medication")
+    supplier: Mapped[Optional["Supplier"]] = relationship("Supplier", back_populates="medications")
 
 
 class Prescription(Base):

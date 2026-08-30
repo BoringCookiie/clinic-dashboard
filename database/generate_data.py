@@ -1,7 +1,7 @@
 """
 Synthetic Data Generation Script for Clinic Database.
 Populates SQLite database with realistic, correlated clinic data:
-patients, departments, doctors, staff, appointments, visits, diagnoses,
+patients, departments, doctors, staff, suppliers, appointments, visits, diagnoses,
 medications, prescriptions, lab tests, billing, and payments.
 
 Uses Faker, numpy, and random seeds for 100% reproducibility and idempotency.
@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from database.db_utils import init_db, SessionLocal
 from database.schema import (
     Patient, Department, Doctor, Staff, Appointment, Visit,
-    Diagnosis, Medication, Prescription, LabTest, Billing, Payment
+    Diagnosis, Medication, Prescription, LabTest, Billing, Payment, Supplier
 )
 
 # Seed for reproducibility
@@ -161,7 +161,36 @@ def generate_patients(session: Session, count: int = 400) -> list[Patient]:
     return patients
 
 
-def generate_medications(session: Session) -> list[Medication]:
+def generate_suppliers(session: Session) -> list[Supplier]:
+    suppliers_data = [
+        {"name": "PharmaCorp Distribution", "category": "Pharmaceuticals", "contact_person": "Nadia Alaoui", "start": date(2019, 3, 1)},
+        {"name": "MediSupply International", "category": "Pharmaceuticals", "contact_person": "Karim Bensaid", "start": date(2020, 6, 15)},
+        {"name": "BioGen Pharma Solutions", "category": "Pharmaceuticals", "contact_person": "Sophie Lambert", "start": date(2021, 1, 10)},
+        {"name": "MedEquip Technologies", "category": "Medical Equipment", "contact_person": "Youssef El Amrani", "start": date(2018, 9, 5)},
+        {"name": "PrecisionLab Instruments", "category": "Lab Supplies", "contact_person": "Amina Cherkaoui", "start": date(2022, 2, 20)},
+        {"name": "CleanCare Medical Supplies", "category": "Consumables & PPE", "contact_person": "Thomas Weber", "start": date(2020, 11, 1)},
+        {"name": "OrthoTech Devices", "category": "Medical Equipment", "contact_person": "Laila Bouzidi", "start": date(2023, 4, 12)},
+        {"name": "GlobalMeds Wholesale", "category": "Pharmaceuticals", "contact_person": "Hassan Idrissi", "start": date(2019, 7, 22)},
+    ]
+
+    suppliers = []
+    for f in suppliers_data:
+        suppliers.append(Supplier(
+            name=f["name"],
+            category=f["category"],
+            contact_person=f["contact_person"],
+            phone=fake.phone_number()[:25],
+            email=f["name"].lower().replace(" ", ".").replace(",", "") + "@supplier.com",
+            address=fake.street_address(),
+            contract_start_date=f["start"]
+        ))
+
+    session.add_all(suppliers)
+    session.flush()
+    return suppliers
+
+
+def generate_medications(session: Session, suppliers: list[Supplier]) -> list[Medication]:
     meds_data = [
         {"name": "Metformin 500mg", "category": "Antidiabetic", "unit_price": 15.50},
         {"name": "Insulin Glargine 100U/ml", "category": "Antidiabetic", "unit_price": 65.00},
@@ -179,7 +208,8 @@ def generate_medications(session: Session) -> list[Medication]:
         {"name": "Cetirizine 10mg", "category": "Antihistamine", "unit_price": 11.50},
         {"name": "Hydrocortisone Cream 1%", "category": "Topical Corticosteroid", "unit_price": 13.00},
     ]
-    medications = [Medication(**m) for m in meds_data]
+    pharma_suppliers = [f for f in suppliers if f.category == "Pharmaceuticals"] or suppliers
+    medications = [Medication(**m, supplier_id=random.choice(pharma_suppliers).supplier_id) for m in meds_data]
     session.add_all(medications)
     session.flush()
     return medications
@@ -451,20 +481,23 @@ def generate_all():
 
     session = SessionLocal()
     try:
-        print("[1/5] Creating Departments...")
+        print("[1/6] Creating Departments...")
         departments = generate_departments(session)
         
-        print("[2/5] Creating Doctors and Staff...")
+        print("[2/6] Creating Doctors and Staff...")
         doctors = generate_doctors(session, departments)
         staff = generate_staff(session, departments)
 
-        print("[3/5] Creating Patients...")
+        print("[3/6] Creating Patients...")
         patients = generate_patients(session, count=400)
 
-        print("[4/5] Creating Medications...")
-        medications = generate_medications(session)
+        print("[4/6] Creating Suppliers...")
+        suppliers = generate_suppliers(session)
 
-        print("[5/5] Generating Appointments, Visits, Diagnoses, Prescriptions, Lab Tests, Billing & Payments...")
+        print("[5/6] Creating Medications...")
+        medications = generate_medications(session, suppliers)
+
+        print("[6/6] Generating Appointments, Visits, Diagnoses, Prescriptions, Lab Tests, Billing & Payments...")
         generate_clinical_activity(session, patients, doctors, medications, num_appointments=3800)
 
         session.commit()
@@ -478,6 +511,7 @@ def generate_all():
             ("doctors", Doctor),
             ("staff", Staff),
             ("patients", Patient),
+            ("suppliers", Supplier),
             ("medications", Medication),
             ("appointments", Appointment),
             ("visits", Visit),

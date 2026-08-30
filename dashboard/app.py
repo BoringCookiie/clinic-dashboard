@@ -184,7 +184,8 @@ def main():
             render_chart_response(
                 chart_type=resp["chart_type"],
                 data=resp.get("data", []),
-                columns=resp.get("columns")
+                columns=resp.get("columns"),
+                key="chart_active_response"
             )
 
         # Show SQL query collapsible
@@ -214,7 +215,7 @@ def main():
                 FROM appointments
                 GROUP BY month ORDER BY month ASC;
             """)
-            render_line_chart(df_monthly, columns=["month", "total_appointments"])
+            render_line_chart(df_monthly, columns=["month", "total_appointments"], key="overview_monthly_trend")
 
         with col2:
             st.markdown("#### 🩺 Top Diagnoses Prevalence")
@@ -224,7 +225,7 @@ def main():
                 GROUP BY diagnosis_name
                 ORDER BY patient_count DESC LIMIT 7;
             """)
-            render_bar_chart(df_diag, columns=["diagnosis_name", "patient_count"])
+            render_bar_chart(df_diag, columns=["diagnosis_name", "patient_count"], key="overview_top_diagnoses")
 
         col3, col4 = st.columns(2)
         with col3:
@@ -233,7 +234,7 @@ def main():
                 SELECT payment_status, ROUND(SUM(amount), 2) AS total_amount
                 FROM billing GROUP BY payment_status;
             """)
-            render_pie_chart(df_bill, columns=["payment_status", "total_amount"])
+            render_pie_chart(df_bill, columns=["payment_status", "total_amount"], key="overview_billing_breakdown")
 
         with col4:
             st.markdown("#### 👨‍⚕️ Doctors per Department")
@@ -243,7 +244,7 @@ def main():
                 LEFT JOIN doctors doc ON d.department_id = doc.department_id
                 GROUP BY d.name;
             """)
-            render_pie_chart(df_doc, columns=["department_name", "doctor_count"])
+            render_pie_chart(df_doc, columns=["department_name", "doctor_count"], key="overview_doctors_per_department")
 
         st.markdown("#### 📋 Recent Patient Visits")
         df_recent = run_raw_query("""
@@ -258,6 +259,25 @@ def main():
         """)
         render_table(df_recent)
 
+        st.markdown("#### 🚚 Prescriptions Filled per Supplier")
+        df_supplier_volume = run_raw_query("""
+            SELECT s.name AS supplier_name, COUNT(p.prescription_id) AS prescriptions_filled
+            FROM suppliers s
+            JOIN medications m ON m.supplier_id = s.supplier_id
+            LEFT JOIN prescriptions p ON p.medication_id = m.medication_id
+            GROUP BY s.name
+            ORDER BY prescriptions_filled DESC;
+        """)
+        render_bar_chart(df_supplier_volume, columns=["supplier_name", "prescriptions_filled"], key="overview_supplier_volume")
+
+        st.markdown("#### 🏭 Supplier Directory")
+        df_supplier_list = run_raw_query("""
+            SELECT name AS supplier_name, category, contact_person, phone, email
+            FROM suppliers
+            ORDER BY name ASC;
+        """)
+        render_table(df_supplier_list)
+
     with tab_history:
         if st.session_state["chat_history"]:
             c1, c2 = st.columns([4, 1])
@@ -270,7 +290,7 @@ def main():
                     st.session_state["last_executed_query"] = None
                     st.rerun()
 
-            for item in st.session_state["chat_history"]:
+            for hist_idx, item in enumerate(st.session_state["chat_history"]):
                 q_hist = item["question"]
                 resp_hist: ChatbotResponse = item["response"]
 
@@ -289,7 +309,8 @@ def main():
                         render_chart_response(
                             chart_type=resp_hist["chart_type"],
                             data=resp_hist.get("data", []),
-                            columns=resp_hist.get("columns")
+                            columns=resp_hist.get("columns"),
+                            key=f"chart_history_{hist_idx}"
                         )
 
                     if resp_hist.get("sql_query"):

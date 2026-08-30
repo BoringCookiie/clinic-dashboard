@@ -17,10 +17,14 @@ COLOR_PALETTE = ["#38bdf8", "#818cf8", "#34d399", "#f43f5e", "#fbbf24", "#a78bfa
 def render_chart_response(
     chart_type: str,
     data: list[dict[str, Any]],
-    columns: Optional[list[str]] = None
+    columns: Optional[list[str]] = None,
+    key: Optional[str] = None
 ) -> None:
     """
     Dispatcher function to render the appropriate chart component based on chart_type.
+    `key` should be a unique string per call site (e.g. derived from the question text
+    and its position) so Streamlit doesn't collide multiple plotly_chart elements
+    that would otherwise auto-generate the same internal ID.
     """
     if chart_type == "none" or not data:
         return
@@ -35,11 +39,11 @@ def render_chart_response(
         return
 
     if chart_type == "bar":
-        render_bar_chart(df, columns)
+        render_bar_chart(df, columns, key=key)
     elif chart_type == "line":
-        render_line_chart(df, columns)
+        render_line_chart(df, columns, key=key)
     elif chart_type == "pie":
-        render_pie_chart(df, columns)
+        render_pie_chart(df, columns, key=key)
     elif chart_type == "table":
         render_table(df, columns)
     else:
@@ -47,7 +51,7 @@ def render_chart_response(
         render_table(df, columns)
 
 
-def render_bar_chart(df: pd.DataFrame, columns: Optional[list[str]] = None) -> None:
+def render_bar_chart(df: pd.DataFrame, columns: Optional[list[str]] = None, key: Optional[str] = None) -> None:
     """
     Renders a Plotly Bar Chart.
     """
@@ -73,10 +77,10 @@ def render_bar_chart(df: pd.DataFrame, columns: Optional[list[str]] = None) -> N
         yaxis_title=y_col.replace("_", " ").title(),
         height=380
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=key)
 
 
-def render_line_chart(df: pd.DataFrame, columns: Optional[list[str]] = None) -> None:
+def render_line_chart(df: pd.DataFrame, columns: Optional[list[str]] = None, key: Optional[str] = None) -> None:
     """
     Renders a Plotly Line Chart.
     """
@@ -104,10 +108,10 @@ def render_line_chart(df: pd.DataFrame, columns: Optional[list[str]] = None) -> 
         yaxis_title=y_col.replace("_", " ").title(),
         height=380
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=key)
 
 
-def render_pie_chart(df: pd.DataFrame, columns: Optional[list[str]] = None) -> None:
+def render_pie_chart(df: pd.DataFrame, columns: Optional[list[str]] = None, key: Optional[str] = None) -> None:
     """
     Renders a Plotly Pie/Donut Chart.
     """
@@ -127,11 +131,10 @@ def render_pie_chart(df: pd.DataFrame, columns: Optional[list[str]] = None) -> N
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color="#f8fafc"),
         margin=dict(l=20, r=20, t=30, b=20),
         height=380
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=key)
 
 
 def render_table(df: pd.DataFrame, columns: Optional[list[str]] = None) -> None:

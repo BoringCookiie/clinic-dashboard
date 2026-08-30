@@ -126,6 +126,9 @@ def _schema_aware_sql_generator(question: str) -> Optional[str]:
     elif any(k in q_clean for k in ["how many invoices", "invoice count", "total invoices", "billing count"]):
         return "SELECT COUNT(*) AS total_invoices FROM billing;"
 
+    elif any(k in q_clean for k in ["how many suppliers", "supplier count", "total suppliers", "number of suppliers", "how many vendors", "vendor count"]):
+        return "SELECT COUNT(*) AS total_suppliers FROM suppliers;"
+
     # 2. Disease / Diagnosis Queries
     elif any(disease in q_clean for disease in ["diabetes", "hypertension", "asthma", "bronchitis", "osteoarthritis", "gerd", "acne", "infection"]):
         match = next((d for d in ["diabetes", "hypertension", "asthma", "bronchitis", "osteoarthritis", "gerd", "acne", "infection"] if d in q_clean), "condition")
@@ -153,6 +156,10 @@ def _schema_aware_sql_generator(question: str) -> Optional[str]:
     # 7. Medications
     elif any(k in q_clean for k in ["medications", "drugs", "top prescribed", "prescriptions", "most common drugs"]):
         return "SELECT m.name AS medication_name, m.category, COUNT(p.prescription_id) AS prescription_count FROM prescriptions p JOIN medications m ON p.medication_id = m.medication_id GROUP BY m.name, m.category ORDER BY prescription_count DESC LIMIT 10;"
+
+    # 7b. Suppliers / Vendors
+    elif any(k in q_clean for k in ["supplier", "suppliers", "vendor", "vendors", "fournisseur", "fournisseurs"]):
+        return "SELECT s.name AS supplier_name, COUNT(p.prescription_id) AS prescriptions_filled FROM suppliers s JOIN medications m ON m.supplier_id = s.supplier_id LEFT JOIN prescriptions p ON p.medication_id = m.medication_id GROUP BY s.name ORDER BY prescriptions_filled DESC;"
 
     # 8. Doctors & Staffing
     elif any(k in q_clean for k in ["doctor workload", "busiest doctors", "appointments per doctor", "doctor visits"]):
@@ -241,6 +248,8 @@ def generate_natural_answer(question: str, df: pd.DataFrame, sql: str) -> str:
             return f"A total of {val:,} diagnostic lab tests have been ordered."
         if col_raw == "total_invoices" or "invoice" in q_clean:
             return f"A total of {val:,} billing invoices have been generated."
+        if col_raw == "total_suppliers" or "supplier" in q_clean or "vendor" in q_clean:
+            return f"The clinic currently sources medications and supplies from {val} registered suppliers."
 
         col_name = df.columns[0].replace("_", " ").title()
         if isinstance(val, float):
@@ -271,6 +280,11 @@ def generate_natural_answer(question: str, df: pd.DataFrame, sql: str) -> str:
             paid = df[df["payment_status"] == "paid"]["total_amount"].sum() if "payment_status" in df.columns else 0
             return f"Total collected clinic revenue is ${paid:,.2f}. Here is the financial breakdown by payment status."
         return "Here is the financial breakdown of clinic billing invoices."
+
+    # Suppliers / Vendors
+    if "supplier" in q_clean or "vendor" in q_clean:
+        top_supplier = df.iloc[0]["supplier_name"] if "supplier_name" in df.columns else df.iloc[0, 0]
+        return f"Your top supplier by prescription volume is '{top_supplier}'. Below is the breakdown across {rows} suppliers."
 
     # Medications / Prescriptions
     if "medication" in q_clean or "drug" in q_clean or "prescription" in q_clean:
@@ -334,7 +348,27 @@ def get_answer(question: str) -> ChatbotResponse:
                 error=None
             )
 
-        df = run_raw_query(sql_query)
+        try:
+            df = run_raw_query(sql_query)
+        except Exception as exec_err:
+            # The AI-generated SQL was syntactically valid but failed to execute
+            # (e.g. wrong table/column names). Retry with the reliable keyword-based
+            # fallback before giving up, instead of jumping straight to the
+            # "I don't have enough information" guardrail message.
+            logger.warning(f"Generated SQL failed to execute ('{sql_query}'): {exec_err}. Retrying with fallback generator.")
+            fallback_sql = _schema_aware_sql_generator(question)
+            if not fallback_sql:
+                return ChatbotResponse(
+                    answer_text="I don't have enough information in the clinic database to answer this question. Please ask about clinic patients, doctors, appointments, diagnoses, treatments, prescriptions, or billing statistics.",
+                    chart_type="none",
+                    data=[],
+                    columns=None,
+                    sql_query=None,
+                    error=None
+                )
+            sql_query = fallback_sql
+            df = run_raw_query(sql_query)
+
         columns = list(df.columns)
         data = df.to_dict(orient="records")
         chart_type = infer_chart_type(df, columns)
