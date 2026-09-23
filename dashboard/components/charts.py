@@ -65,13 +65,13 @@ def render_bar_chart(df: pd.DataFrame, columns: Optional[list[str]] = None, key:
         y=y_col,
         color_discrete_sequence=[COLOR_PALETTE[0]],
         text_auto=True,
-        template="plotly_dark"
+        template="plotly_white"
     )
     
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color="#f8fafc"),
+        font=dict(family="Inter, sans-serif", color="#333333"),
         margin=dict(l=20, r=20, t=30, b=20),
         xaxis_title=x_col.replace("_", " ").title(),
         yaxis_title=y_col.replace("_", " ").title(),
@@ -95,14 +95,14 @@ def render_line_chart(df: pd.DataFrame, columns: Optional[list[str]] = None, key
         markers=True,
         line_shape="linear",
         color_discrete_sequence=[COLOR_PALETTE[1]],
-        template="plotly_dark"
+        template="plotly_white"
     )
     
     fig.update_traces(line=dict(width=3), marker=dict(size=8))
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color="#f8fafc"),
+        font=dict(family="Inter, sans-serif", color="#333333"),
         margin=dict(l=20, r=20, t=30, b=20),
         xaxis_title=x_col.replace("_", " ").title(),
         yaxis_title=y_col.replace("_", " ").title(),
@@ -125,12 +125,13 @@ def render_pie_chart(df: pd.DataFrame, columns: Optional[list[str]] = None, key:
         values=values_col,
         hole=0.4,
         color_discrete_sequence=COLOR_PALETTE,
-        template="plotly_dark"
+        template="plotly_white"
     )
     
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, sans-serif", color="#333333"),
         margin=dict(l=20, r=20, t=30, b=20),
         height=380
     )

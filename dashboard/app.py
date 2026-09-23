@@ -5,6 +5,7 @@ Provides interactive clinic analytics overview and natural language query assist
 
 import os
 import sys
+import base64
 from pathlib import Path
 import streamlit as st
 import pandas as pd
@@ -29,10 +30,9 @@ from chatbot.interface import ChatbotResponse
 
 # Streamlit Page Configuration
 st.set_page_config(
-    page_title="Smart Clinic Dashboard",
-    page_icon="🏥",
+    page_title="Clinique La Vallée",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Load Custom CSS Styling
@@ -40,6 +40,53 @@ CSS_PATH = ROOT_DIR / "dashboard" / "static" / "style.css"
 if CSS_PATH.exists():
     with open(CSS_PATH, "r", encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# Inject Background Image via Base64 CSS
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+def render_custom_header():
+    bg_path = ROOT_DIR / "dashboard" / "static" / "background.jpg"
+    logo_path = ROOT_DIR / "dashboard" / "static" / "logo.png"
+    
+    bg_url = f"data:image/jpeg;base64,{get_base64_of_bin_file(bg_path)}" if bg_path.exists() else ""
+    logo_img = f'<img src="data:image/png;base64,{get_base64_of_bin_file(logo_path)}" alt="Clinique La Vallée">' if logo_path.exists() else "Clinique La Vallée"
+    
+    header_html = f"""
+    <div class="custom-nav-container">
+        <div class="logo-overlay">
+            {logo_img}
+        </div>
+        <div class="custom-nav">
+            <div class="nav-links">
+                <span>Tableau de Bord</span>
+                <span>Patients</span>
+                <span>Planning</span>
+                <span>Médecins</span>
+                <span>Facturation</span>
+                <button class="nav-btn">DÉCONNEXION</button>
+            </div>
+        </div>
+    </div>
+    <div class="hero-section" style="background-image: url('{bg_url}');">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-subtitle">Portail du Personnel</div>
+            <div class="hero-title">Système de Gestion</div>
+            <div class="hero-desc">Accédez aux dossiers médicaux, gérez le planning des consultations, et suivez les indicateurs clés de performance de la clinique en temps réel.</div>
+            <div class="hero-avail"><strong>Statut du système :</strong> En ligne</div>
+            <button class="hero-btn">AFFICHER LES STATISTIQUES</button>
+        </div>
+    </div>
+    <div class="info-bar">
+        <div class="info-item">Gestion des Patients</div>
+        <div class="info-item">Analyses & Rapports</div>
+        <div class="info-item">Administration</div>
+    </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
 
 
 SAMPLE_QUESTIONS = [
@@ -83,38 +130,17 @@ def main():
     if "last_executed_query" not in st.session_state:
         st.session_state["last_executed_query"] = None
 
-    # Sidebar Navigation & Information
-    with st.sidebar:
-        st.markdown("## 🏥 Smart Clinic Admin")
-        st.markdown("---")
-        
-        st.markdown("### 📊 Live Database Stats")
-        metrics = load_overview_metrics()
-        if metrics:
-            st.metric("Total Patients", metrics[0]["value"])
-            st.metric("Completed Encounters", metrics[1]["value"])
-            st.metric("Collected Revenue", metrics[2]["value"])
+    render_custom_header()
 
-        st.markdown("---")
-        st.markdown("### 🤖 Hugging Face AI Chatbot")
-        st.info(
-            "**Active Model:** `cssupport/t5-small-awesome-text-to-sql`\n\n"
-            "Converts natural language questions into SQLite queries and returns visual answers!"
-        )
-        st.markdown("---")
-        st.caption("Smart Clinic Management System v1.0.0")
-
-    # App Main Header
-    st.markdown('<div class="section-header">🏥 Smart Clinic Interactive Dashboard</div>', unsafe_allow_html=True)
-    st.markdown("Ask natural language questions to dynamically update dashboard visualizations & query clinic analytics.")
+    st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
 
     # --------------------------------------------------------------------------
-    # PROMINENT NATURAL LANGUAGE QUESTION INPUT SECTION (TOP OF DASHBOARD)
+    # SEARCH / QUERY INPUT SECTION
     # --------------------------------------------------------------------------
-    st.markdown("### 💬 Ask a Question to Filter & Change Dashboard Results")
+    st.markdown("### Assistant de Recherche")
 
     # Sample Question Quick Chips
-    st.markdown("**💡 Quick Question Shortcuts (Click to update dashboard):**")
+    st.markdown("**Questions Fréquentes (Cliquez pour lancer la recherche) :**")
     chip_cols = st.columns(len(SAMPLE_QUESTIONS))
     clicked_question = None
 
@@ -133,7 +159,7 @@ def main():
         )
     with col_btn:
         st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-        ask_btn_clicked = st.button("Ask Question 🚀", key="ask_btn_trigger", use_container_width=True)
+        ask_btn_clicked = st.button("Rechercher", key="ask_btn_trigger", use_container_width=True, type="primary")
 
     # Determine candidate question
     candidate_query = None
@@ -144,7 +170,7 @@ def main():
 
     # Process query if it's new or requested
     if candidate_query and candidate_query != st.session_state.get("last_executed_query"):
-        with st.spinner(f"AI Model Querying clinic database for: '{candidate_query}'..."):
+        with st.spinner(f"Analyse en cours : '{candidate_query}'..."):
             response: ChatbotResponse = get_answer(candidate_query)
             st.session_state["active_response"] = {
                 "question": candidate_query,
@@ -161,14 +187,14 @@ def main():
         q_text = active_item["question"]
         resp: ChatbotResponse = active_item["response"]
 
-        st.markdown("<hr style='border-color: rgba(56, 189, 248, 0.4); margin: 25px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: rgba(76, 175, 80, 0.4); margin: 25px 0;'>", unsafe_allow_html=True)
         st.markdown(
             f"""
-            <div class="qa-card" style="border: 2px solid #38bdf8;">
-                <div class="qa-question-header" style="color: #38bdf8; font-size: 1.2rem;">
-                    🎯 Active Query Result: "{q_text}"
+            <div class="qa-card">
+                <div class="qa-question-header">
+                    Résultat : "{q_text}"
                 </div>
-                <div class="qa-answer-text" style="font-size: 1.1rem; font-weight: 500;">
+                <div class="qa-answer-text">
                     {resp['answer_text']}
                 </div>
             </div>
@@ -190,18 +216,19 @@ def main():
 
         # Show SQL query collapsible
         if resp.get("sql_query"):
-            with st.expander("🔍 How I got this answer (Generated SQL Query)", expanded=True):
+            with st.expander("Voir la requête SQL générée", expanded=True):
                 st.code(resp["sql_query"], language="sql")
 
-        st.markdown("<hr style='border-color: rgba(255, 255, 255, 0.1); margin: 25px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: rgba(76, 175, 80, 0.2); margin: 25px 0;'>", unsafe_allow_html=True)
 
     # --------------------------------------------------------------------------
     # DASHBOARD OVERVIEW & HISTORY TABS
     # --------------------------------------------------------------------------
-    tab_overview, tab_history = st.tabs(["📊 Clinic Overview Dashboard", "📜 Past Questions History"])
+    tab_overview, tab_history = st.tabs(["Tableau de Bord", "Historique de Recherche"])
 
     with tab_overview:
-        st.markdown("### Executive Overview & Aggregate Analytics")
+        st.markdown("### Aperçu Exécutif & Analytique Globale")
+        metrics = load_overview_metrics()
         if metrics:
             render_kpi_grid(metrics)
 
@@ -209,7 +236,7 @@ def main():
 
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("#### 📈 Monthly Appointment Trends")
+            st.markdown("#### Tendances Mensuelles des Rendez-vous")
             df_monthly = run_raw_query("""
                 SELECT strftime('%Y-%m', appointment_date) AS month, COUNT(*) AS total_appointments
                 FROM appointments
@@ -218,7 +245,7 @@ def main():
             render_line_chart(df_monthly, columns=["month", "total_appointments"], key="overview_monthly_trend")
 
         with col2:
-            st.markdown("#### 🩺 Top Diagnoses Prevalence")
+            st.markdown("#### Prévalence des Diagnostics Principaux")
             df_diag = run_raw_query("""
                 SELECT diagnosis_name, COUNT(*) AS patient_count
                 FROM diagnoses
@@ -229,7 +256,7 @@ def main():
 
         col3, col4 = st.columns(2)
         with col3:
-            st.markdown("#### 💳 Billing & Payment Breakdown")
+            st.markdown("#### Répartition de la Facturation et des Paiements")
             df_bill = run_raw_query("""
                 SELECT payment_status, ROUND(SUM(amount), 2) AS total_amount
                 FROM billing GROUP BY payment_status;
@@ -237,7 +264,7 @@ def main():
             render_pie_chart(df_bill, columns=["payment_status", "total_amount"], key="overview_billing_breakdown")
 
         with col4:
-            st.markdown("#### 👨‍⚕️ Doctors per Department")
+            st.markdown("#### Médecins par Département")
             df_doc = run_raw_query("""
                 SELECT d.name AS department_name, COUNT(doc.doctor_id) AS doctor_count
                 FROM departments d
@@ -246,7 +273,7 @@ def main():
             """)
             render_pie_chart(df_doc, columns=["department_name", "doctor_count"], key="overview_doctors_per_department")
 
-        st.markdown("#### 📋 Recent Patient Visits")
+        st.markdown("#### Visites Récentes des Patients")
         df_recent = run_raw_query("""
             SELECT v.visit_id, p.first_name || ' ' || p.last_name AS patient_name,
                    d.first_name || ' ' || d.last_name AS doctor_name,
@@ -282,9 +309,9 @@ def main():
         if st.session_state["chat_history"]:
             c1, c2 = st.columns([4, 1])
             with c1:
-                st.markdown(f"### Question & Answer History ({len(st.session_state['chat_history'])})")
+                st.markdown(f"### Historique des Questions ({len(st.session_state['chat_history'])})")
             with c2:
-                if st.button("Clear History 🗑️", key="clear_chat_hist"):
+                if st.button("Effacer l'Historique", key="clear_chat_hist"):
                     st.session_state["chat_history"] = []
                     st.session_state["active_response"] = None
                     st.session_state["last_executed_query"] = None
@@ -298,7 +325,7 @@ def main():
                     st.markdown(
                         f"""
                         <div class="qa-card">
-                            <div class="qa-question-header">❓ {q_hist}</div>
+                            <div class="qa-question-header">Question : {q_hist}</div>
                             <div class="qa-answer-text">{resp_hist['answer_text']}</div>
                         </div>
                         """,
@@ -314,12 +341,14 @@ def main():
                         )
 
                     if resp_hist.get("sql_query"):
-                        with st.expander("🔍 SQL Query Executed", expanded=False):
+                        with st.expander("Requête SQL Exécutée", expanded=False):
                             st.code(resp_hist["sql_query"], language="sql")
 
                     st.markdown("<br>", unsafe_allow_html=True)
         else:
-            st.info("No past questions asked yet. Ask a question above to see your query history here!")
+            st.info("Aucune question posée pour le moment. Posez une question ci-dessus pour voir votre historique ici.")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
