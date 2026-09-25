@@ -17,8 +17,8 @@ header[data-testid="stHeader"] {
     padding-top: 0rem !important;
     padding-bottom: 2rem !important;
     max-width: 100% !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding-left: 5% !important;
+    padding-right: 5% !important;
 }
 
 /* Container for the inner content (metrics, charts) to keep them centered */
@@ -168,7 +168,7 @@ header[data-testid="stHeader"] {
 /* --- Info Bar --- */
 .info-bar {
     background-color: #3f51b5; /* Match logo background */
-    width: 80%;
+    width: 88%;
     margin: -70px auto 40px auto;
     position: relative;
     z-index: 10;
@@ -297,4 +297,120 @@ hr {
     background-color: #3f51b5 !important;
     color: #ffffff !important;
     border-radius: 4px !important;
+}
+
+
+/* ==========================================================================
+   Navigation & multi-page layout
+   ========================================================================== */
+.stApp { overflow-x: hidden; }
+
+/* Header, hero and page banner stretch edge to edge */
+.custom-nav-container, .hero-section, .page-banner {
+    width: 100vw !important;
+    margin-left: calc(50% - 50vw);
+}
+
+.nav-links a {
+    color: #4a4a4a !important;
+    text-decoration: none !important;
+    padding: 6px 0;
+    border-bottom: 3px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+}
+.nav-links a:hover { color: #3f51b5 !important; }
+.nav-links a.active {
+    color: #3f51b5 !important;
+    border-bottom-color: #fdd835;
+}
+.nav-links a.nav-btn {
+    color: #ffffff !important;
+    border-bottom: none;
+}
+.nav-links a.nav-btn:hover { background-color: #303f9f; }
+
+a.hero-btn {
+    display: inline-block;
+    text-decoration: none !important;
+    color: #333333 !important;
+    transition: transform 0.15s;
+}
+a.hero-btn:hover { transform: translateY(-2px); }
+
+.info-bar a.info-item {
+    color: #ffffff !important;
+    text-decoration: none !important;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+.info-bar a.info-item:hover { background-color: rgba(255,255,255,0.15); }
+
+/* Compact banner used on every page except the home page */
+.page-banner {
+    position: relative;
+    height: 220px;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #ffffff;
+    margin-bottom: 30px;
+}
+.page-banner .hero-overlay { background: rgba(0, 0, 0, 0.62); }
+.page-banner-content { position: relative; z-index: 2; padding: 0 20px; }
+.page-banner-title { font-size: 2.4rem; font-weight: 700; line-height: 1.2; }
+.page-banner-desc { font-size: 1.05rem; margin-top: 8px; opacity: 0.95; }
+
+/* Section titles */
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #212121;
+    margin: 28px 0 12px 0;
+    padding-left: 12px;
+    border-left: 4px solid #3f51b5;
+}
+
+/* Profile / doctor cards */
+.profile-card {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.profile-name { font-size: 1.1rem; font-weight: 700; color: #3f51b5; }
+.profile-sub { font-size: 0.85rem; color: #757575; margin-bottom: 10px; }
+.profile-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    padding: 4px 0;
+    border-top: 1px solid #f2f2f2;
+}
+.profile-row span:last-child { font-weight: 600; color: #333333; }
+
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #eef0fb;
+    color: #3f51b5;
+    margin-right: 6px;
+}
+
+.ai-summary {
+    background: #fffdf0;
+    border: 1px solid #fdd835;
+    border-left: 5px solid #fdd835;
+    border-radius: 8px;
+    padding: 18px 22px;
+    line-height: 1.7;
+    color: #333333;
 }
